@@ -13,12 +13,7 @@ export async function getGstRate(hsnCode: string | null | undefined) {
 }
 
 export async function processCheckout(payload: {
-  cart: Array<{ productId: string; quantity: number; price: number; costPrice: number; total: number; cgstRate: number; sgstRate: number }>;
-  subtotal: number;
-  cgst: number;
-  sgst: number;
-  costPrice: number | string;
-  grandTotal: number;
+  cart: Array<{ productId: string; quantity: number }>;
 }) {
   const session = await auth();
 
@@ -33,35 +28,16 @@ export async function processCheckout(payload: {
 
   // Execute inside a transaction to ensure all-or-nothing processing
   const invoice = await prisma.$transaction(async (tx) => {
-    // 1. Create the Invoice record
-    const newInvoice = await tx.invoice.create({
-      data: {
-        tenantId,
-        userId,
-        invoiceNumber,
-        subTotal: new Prisma.Decimal(payload.subtotal),
-        totalCgst: new Prisma.Decimal(payload.cgst),
-        totalSgst: new Prisma.Decimal(payload.sgst),
-        totalIgst: new Prisma.Decimal(0),
-        grandTotal: new Prisma.Decimal(payload.grandTotal),
-        // 2. Create nested InvoiceItem records
-        items: {
-          create: payload.cart.map((item) => ({
-            productId: item.productId,
-            quantity: new Prisma.Decimal(item.quantity),
-            price: new Prisma.Decimal(item.price),
-            costPrice: new Prisma.Decimal(item.costPrice),
-            cgstRate: new Prisma.Decimal(item.cgstRate),
-            sgstRate: new Prisma.Decimal(item.sgstRate),
-            igstRate: new Prisma.Decimal(0),
-          })),
-        },
-      },
-    });
+    
+    let serverSubtotal = new Prisma.Decimal(0);
+    let serverTotalCgst = new Prisma.Decimal(0);
+    let serverTotalSgst = new Prisma.Decimal(0);
+    let serverGrandTotal = new Prisma.Decimal(0);
 
-    // 3. Decrement stock counts safely
+    const itemsToCreate = [];
+
+    // 1. Validate stock, fetch exact prices, and calculate totals securely
     for (const item of payload.cart) {
-      // Find the current product to check stock first
       const product = await tx.product.findUnique({
         where: { id: item.productId },
       });
@@ -77,16 +53,65 @@ export async function processCheckout(payload: {
         );
       }
 
+      // Calculate totals using Prisma.Decimal methods
+      const qty = new Prisma.Decimal(item.quantity);
+      const itemPrice = new Prisma.Decimal(product.price as Prisma.Decimal.Value);
+      const itemTotal = qty.mul(itemPrice);
+      
+      const gstRate = new Prisma.Decimal(product.gstRate as Prisma.Decimal.Value);
+      const one = new Prisma.Decimal(1);
+      const hundred = new Prisma.Decimal(100);
+      const divisor = one.add(gstRate.div(hundred));
+      
+      const taxableValue = itemTotal.div(divisor);
+      const totalGstAmount = itemTotal.sub(taxableValue);
+      const halfGstAmount = totalGstAmount.div(new Prisma.Decimal(2));
+
+      serverSubtotal = serverSubtotal.add(taxableValue);
+      serverTotalCgst = serverTotalCgst.add(halfGstAmount);
+      serverTotalSgst = serverTotalSgst.add(halfGstAmount);
+      serverGrandTotal = serverGrandTotal.add(itemTotal);
+
+      itemsToCreate.push({
+        productId: product.id,
+        quantity: qty,
+        price: product.price,
+        costPrice: product.costPrice,
+        gstRate: product.gstRate,
+        cgstRate: gstRate.div(new Prisma.Decimal(2)),
+        sgstRate: gstRate.div(new Prisma.Decimal(2)),
+        igstRate: new Prisma.Decimal(0),
+      });
+
+      // Decrement stock safely
       await tx.product.update({
         where: { 
           id: item.productId,
           stock: { gte: item.quantity }
         },
         data: {
-          stock: { decrement: new Prisma.Decimal(item.quantity) },
+          stock: { decrement: qty },
         },
       });
     }
+
+    // 2. Create the Invoice record with server-calculated totals
+    const newInvoice = await tx.invoice.create({
+      data: {
+        tenantId,
+        userId,
+        invoiceNumber,
+        subTotal: serverSubtotal,
+        totalCgst: serverTotalCgst,
+        totalSgst: serverTotalSgst,
+        totalIgst: new Prisma.Decimal(0),
+        grandTotal: serverGrandTotal,
+        // 3. Create nested InvoiceItem records
+        items: {
+          create: itemsToCreate,
+        },
+      },
+    });
 
     return newInvoice;
   });

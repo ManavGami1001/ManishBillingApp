@@ -29,17 +29,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email is already registered" }, { status: 400 });
     }
 
-    // Since users must belong to a tenant, we either need a default tenant or create one.
-    // We will create a default "Aavak Tenant" for new signups for this implementation.
-    let tenant = await prisma.tenant.findFirst({ where: { name: "Aavak Default Tenant" } });
-    if (!tenant) {
-      tenant = await prisma.tenant.create({
-        data: {
-          name: "Aavak Default Tenant",
-          state: "Global",
-        },
-      });
-    }
+    // Create a brand new isolated Tenant for every sign-up dynamically
+    const tenant = await prisma.tenant.create({
+      data: {
+        name: `${username}'s Store`,
+      },
+    });
 
     const passwordHash = await bcrypt.hash(password, 10);
 

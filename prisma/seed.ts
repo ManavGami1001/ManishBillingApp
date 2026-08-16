@@ -12,18 +12,18 @@ async function main() {
     create: {
       id: 'seed-tenant-1',
       name: 'Acme Supermart',
-      state: 'Maharashtra',
     },
   });
 
   const admin = await prisma.user.upsert({
     where: { email: 'admin@example.com' },
     update: {
-      password: hashedPassword,
+      passwordHash: hashedPassword,
     },
     create: {
       email: 'admin@example.com',
-      password: hashedPassword,
+      username: 'admin',
+      passwordHash: hashedPassword,
       name: 'Admin User',
       role: 'ADMIN',
       tenantId: tenant.id,
