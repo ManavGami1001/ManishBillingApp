@@ -19,6 +19,8 @@ export default async function InventoryPage() {
   const serializedProducts = products.map((p) => ({
     ...p,
     price: p.price.toString(),
+    costPrice: p.costPrice.toString(),
+    gstRate: p.gstRate.toString(),
     stock: Number(p.stock)
   }));
 
@@ -44,6 +46,7 @@ export default async function InventoryPage() {
             </div>
           ) : (
             <div className="rounded-md border">
+            <div className="w-full overflow-x-auto pb-4">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -61,6 +64,7 @@ export default async function InventoryPage() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
             </div>
           )}
         </CardContent>

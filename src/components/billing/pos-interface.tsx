@@ -174,9 +174,9 @@ export function POSInterface({ products }: { products: Product[] }) {
   };
 
   return (
-    <div className="grid lg:grid-cols-3 gap-6 h-[calc(100vh-140px)]">
+    <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 h-full lg:h-[calc(100vh-140px)]">
       {/* Left Column: Product List */}
-      <Card className="lg:col-span-2 flex flex-col overflow-hidden">
+      <Card className="lg:col-span-2 flex flex-col overflow-hidden min-h-[400px] lg:min-h-0">
         <CardHeader className="pb-3 border-b">
           <CardTitle>Products</CardTitle>
           <div className="relative mt-2">
@@ -261,29 +261,29 @@ export function POSInterface({ products }: { products: Product[] }) {
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-7 w-7 rounded-full"
+                        className="h-9 w-9 lg:h-7 lg:w-7 rounded-full"
                         onClick={() => updateQuantity(item.product.id, -1)}
                         disabled={isProcessing}
                       >
-                        <Minus className="h-3 w-3" />
+                        <Minus className="h-4 w-4 lg:h-3 lg:w-3" />
                       </Button>
-                      <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
+                      <span className="w-8 text-center text-base lg:text-sm font-medium">{item.quantity}</span>
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-7 w-7 rounded-full"
+                        className="h-9 w-9 lg:h-7 lg:w-7 rounded-full"
                         onClick={() => updateQuantity(item.product.id, 1)}
                         disabled={isProcessing}
                       >
-                        <Plus className="h-3 w-3" />
+                        <Plus className="h-4 w-4 lg:h-3 lg:w-3" />
                       </Button>
-                      <div className="w-16 text-right font-medium text-sm">
+                      <div className="w-20 text-right font-medium text-base lg:text-sm">
                         ₹{item.total.toFixed(2)}
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                        className="h-10 w-10 lg:h-7 lg:w-7 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 ml-2"
                         onClick={() => removeFromCart(item.product.id)}
                         disabled={isProcessing}
                       >

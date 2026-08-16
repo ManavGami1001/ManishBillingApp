@@ -38,6 +38,7 @@ export default async function SuppliersPage() {
             </div>
           ) : (
             <div className="rounded-md border">
+            <div className="w-full overflow-x-auto pb-4">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -66,6 +67,7 @@ export default async function SuppliersPage() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
             </div>
           )}
         </CardContent>

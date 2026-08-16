@@ -1,4 +1,4 @@
-import { Home, Receipt, Package, Truck, FileBarChart, Settings, BarChart2 } from "lucide-react"
+import { Home, Receipt, Package, Truck, FileBarChart, Settings, BarChart2, FileText } from "lucide-react"
 import Link from "next/link"
 import {
   Sidebar,
@@ -23,6 +23,11 @@ const items = [
     title: "Billing",
     url: "/dashboard/billing",
     icon: Receipt,
+  },
+  {
+    title: "Invoices",
+    url: "/dashboard/invoices",
+    icon: FileText,
   },
   {
     title: "Inventory",

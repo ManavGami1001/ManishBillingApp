@@ -41,7 +41,7 @@ export function AddSupplierDialog() {
       <DialogTrigger render={<Button className="flex items-center gap-2" />}>
         <Plus className="h-4 w-4" />Add Supplier
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="w-[95vw] max-w-md sm:w-full max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Supplier</DialogTitle>
           <DialogDescription>

@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ClickableInvoiceRow } from "./clickable-row";
 
 export default async function StatsPage() {
   const session = await auth();
@@ -58,11 +59,7 @@ export default async function StatsPage() {
               </TableHeader>
               <TableBody>
                 {recentInvoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                    <TableCell>{invoice.createdAt.toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right">₹{invoice.grandTotal.toString()}</TableCell>
-                  </TableRow>
+                  <ClickableInvoiceRow key={invoice.id} invoice={invoice} />
                 ))}
                 {recentInvoices.length === 0 && (
                   <TableRow>

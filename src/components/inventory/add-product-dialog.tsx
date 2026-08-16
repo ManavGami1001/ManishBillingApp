@@ -71,7 +71,7 @@ export function AddProductDialog() {
       <DialogTrigger className={buttonVariants({ variant: "default" })}>
         Add Product
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="w-[95vw] max-w-md sm:w-full max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Add New Product</DialogTitle>

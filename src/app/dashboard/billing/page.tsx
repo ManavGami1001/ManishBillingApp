@@ -31,6 +31,8 @@ export default async function BillingPage() {
   const serializedProducts = products.map((p) => ({
     ...p,
     price: p.price.toString(),
+    costPrice: p.costPrice.toString(),
+    gstRate: p.gstRate.toString(),
     stock: Number(p.stock), 
   }));
 
