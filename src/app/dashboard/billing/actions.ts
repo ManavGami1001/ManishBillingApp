@@ -13,10 +13,11 @@ export async function getGstRate(hsnCode: string | null | undefined) {
 }
 
 export async function processCheckout(payload: {
-  cart: Array<{ productId: string; quantity: number; price: number; total: number; cgstRate: number; sgstRate: number }>;
+  cart: Array<{ productId: string; quantity: number; price: number; costPrice: number; total: number; cgstRate: number; sgstRate: number }>;
   subtotal: number;
   cgst: number;
   sgst: number;
+  costPrice: number | string;
   grandTotal: number;
 }) {
   const session = await auth();
@@ -49,6 +50,7 @@ export async function processCheckout(payload: {
             productId: item.productId,
             quantity: new Prisma.Decimal(item.quantity),
             price: new Prisma.Decimal(item.price),
+            costPrice: new Prisma.Decimal(item.costPrice),
             cgstRate: new Prisma.Decimal(item.cgstRate),
             sgstRate: new Prisma.Decimal(item.sgstRate),
             igstRate: new Prisma.Decimal(0),
