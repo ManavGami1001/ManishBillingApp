@@ -1,5 +1,5 @@
-import { Home, Receipt, Package, Truck, FileBarChart } from "lucide-react"
-
+import { Home, Receipt, Package, Truck, FileBarChart, Settings, BarChart2 } from "lucide-react"
+import Link from "next/link"
 import {
   Sidebar,
   SidebarContent,
@@ -39,6 +39,16 @@ const items = [
     url: "/dashboard/reports",
     icon: FileBarChart,
   },
+  {
+    title: "Stats",
+    url: "/dashboard/stats",
+    icon: BarChart2,
+  },
+  {
+    title: "Settings",
+    url: "/dashboard/settings",
+    icon: Settings,
+  },
 ]
 
 export function AppSidebar() {
@@ -47,7 +57,7 @@ export function AppSidebar() {
       <SidebarHeader className="h-14 flex items-center justify-center border-b font-bold tracking-tight">
         <div className="flex items-center gap-2">
           <Package className="h-6 w-6" />
-          <span>Retail POS</span>
+          <span>Aavak.io</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -57,12 +67,12 @@ export function AppSidebar() {
             <SidebarMenu>
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton>
-                    <a href={item.url} className="flex items-center gap-2">
+                  <Link href={item.url} className="flex items-center gap-2">
+                    <SidebarMenuButton className="flex items-center gap-2 w-full">
                       <item.icon />
                       <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

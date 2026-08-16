@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Plus, Minus, Trash2, ShoppingCart, Loader2 } from "lucide-react";
-import { processCheckout } from "@/app/dashboard/billing/actions";
+import { processCheckout, getGstRate } from "@/app/dashboard/billing/actions";
 import { useRouter } from "next/navigation";
 
 // Define a safe product type since Prisma.Decimal is serialized to string across the boundary
 type Product = {
   id: string;
   name: string;
+  hsnCode?: string | null;
   price: number | string;
   stock: number;
 };
@@ -21,6 +22,10 @@ type CartItem = {
   product: Product;
   quantity: number;
   total: number;
+  cgstRate: number;
+  sgstRate: number;
+  cgstAmount: number;
+  sgstAmount: number;
 };
 
 export function POSInterface({ products }: { products: Product[] }) {
@@ -29,6 +34,7 @@ export function POSInterface({ products }: { products: Product[] }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shakeId, setShakeId] = useState<string | null>(null);
 
   // Filter products based on search
   const filteredProducts = products.filter((p) =>
@@ -38,29 +44,62 @@ export function POSInterface({ products }: { products: Product[] }) {
   // Helper to parse decimal safely
   const getPrice = (price: any) => Number(price) || 0;
 
-  const addToCart = (product: Product) => {
-    setCart((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.product.id === product.id
-            ? {
+  const addToCart = async (product: Product) => {
+    if (product.stock <= 0) {
+      setShakeId(product.id);
+      setTimeout(() => setShakeId(null), 500);
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const { cgst, sgst } = await getGstRate(product.hsnCode);
+      const totalGstRate = cgst + sgst;
+      
+      setCart((prev) => {
+        const existing = prev.find((item) => item.product.id === product.id);
+        if (existing) {
+          return prev.map((item) => {
+            if (item.product.id === product.id) {
+              const newQuantity = item.quantity + 1;
+              const newTotal = Number((newQuantity * getPrice(product.price)).toFixed(2));
+              const taxableValue = newTotal / (1 + (totalGstRate / 100));
+              const totalGstAmount = newTotal - taxableValue;
+              
+              return {
                 ...item,
-                quantity: item.quantity + 1,
-                total: (item.quantity + 1) * getPrice(product.price),
-              }
-            : item
-        );
-      }
-      return [
-        ...prev,
-        {
-          product,
-          quantity: 1,
-          total: getPrice(product.price),
-        },
-      ];
-    });
+                quantity: newQuantity,
+                total: newTotal,
+                cgstAmount: Number((totalGstAmount / 2).toFixed(2)),
+                sgstAmount: Number((totalGstAmount / 2).toFixed(2)),
+              };
+            }
+            return item;
+          });
+        }
+        
+        const total = getPrice(product.price);
+        const taxableValue = total / (1 + (totalGstRate / 100));
+        const totalGstAmount = total - taxableValue;
+        
+        return [
+          ...prev,
+          {
+            product,
+            quantity: 1,
+            total: Number(total.toFixed(2)),
+            cgstRate: cgst,
+            sgstRate: sgst,
+            cgstAmount: Number((totalGstAmount / 2).toFixed(2)),
+            sgstAmount: Number((totalGstAmount / 2).toFixed(2)),
+          },
+        ];
+      });
+    } catch (err) {
+      console.error("Failed to fetch GST rate", err);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const updateQuantity = (productId: string, delta: number) => {
@@ -69,10 +108,17 @@ export function POSInterface({ products }: { products: Product[] }) {
         .map((item) => {
           if (item.product.id === productId) {
             const newQuantity = item.quantity + delta;
+            const newTotal = Number((newQuantity * getPrice(item.product.price)).toFixed(2));
+            const totalGstRate = item.cgstRate + item.sgstRate;
+            const taxableValue = newTotal / (1 + (totalGstRate / 100));
+            const totalGstAmount = newTotal - taxableValue;
+            
             return {
               ...item,
               quantity: newQuantity,
-              total: newQuantity * getPrice(item.product.price),
+              total: newTotal,
+              cgstAmount: Number((totalGstAmount / 2).toFixed(2)),
+              sgstAmount: Number((totalGstAmount / 2).toFixed(2)),
             };
           }
           return item;
@@ -85,11 +131,11 @@ export function POSInterface({ products }: { products: Product[] }) {
     setCart((prev) => prev.filter((item) => item.product.id !== productId));
   };
 
-  // Calculations
-  const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.total, 0), [cart]);
-  const cgst = subtotal * 0.09; // 9%
-  const sgst = subtotal * 0.09; // 9%
-  const grandTotal = subtotal + cgst + sgst;
+  // Calculations rounded carefully
+  const grandTotal = useMemo(() => Number(cart.reduce((sum, item) => sum + item.total, 0).toFixed(2)), [cart]);
+  const cgstTotal = useMemo(() => Number(cart.reduce((sum, item) => sum + item.cgstAmount, 0).toFixed(2)), [cart]);
+  const sgstTotal = useMemo(() => Number(cart.reduce((sum, item) => sum + item.sgstAmount, 0).toFixed(2)), [cart]);
+  const subtotal = Number((grandTotal - cgstTotal - sgstTotal).toFixed(2));
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
@@ -104,14 +150,16 @@ export function POSInterface({ products }: { products: Product[] }) {
           quantity: c.quantity,
           price: getPrice(c.product.price),
           total: c.total,
+          cgstRate: c.cgstRate,
+          sgstRate: c.sgstRate,
         })),
         subtotal,
-        cgst,
-        sgst,
+        cgst: cgstTotal,
+        sgst: sgstTotal,
         grandTotal,
       };
 
-      const result = await processCheckout(payload);
+      const result = await processCheckout(payload as any);
       
       if (result.success) {
         setCart([]); // Clear cart
@@ -150,6 +198,10 @@ export function POSInterface({ products }: { products: Product[] }) {
                 <div
                   key={product.id}
                   onClick={() => !isProcessing && addToCart(product)}
+                  style={{
+                    transform: shakeId === product.id ? "translateX(5px) rotate(1deg)" : "none",
+                    transition: "transform 0.1s ease-in-out"
+                  }}
                   className={`group relative rounded-lg border p-4 transition-colors ${
                     isProcessing ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-primary hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
@@ -159,7 +211,7 @@ export function POSInterface({ products }: { products: Product[] }) {
                   </h3>
                   <div className="mt-2 flex items-center justify-between">
                     <span className="text-sm font-medium">₹{getPrice(product.price).toFixed(2)}</span>
-                    <span className="text-xs text-muted-foreground bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
+                    <span className={`text-xs px-2 py-1 rounded ${shakeId === product.id || product.stock <= 0 ? 'text-red-500 font-bold bg-red-50' : 'text-muted-foreground bg-slate-100 dark:bg-slate-800'}`}>
                       Stock: {product.stock}
                     </span>
                   </div>
@@ -202,7 +254,7 @@ export function POSInterface({ products }: { products: Product[] }) {
                     <div className="flex-1 overflow-hidden pr-2">
                       <h4 className="text-sm font-medium truncate">{item.product.name}</h4>
                       <div className="text-xs text-muted-foreground mt-1">
-                        ₹{getPrice(item.product.price).toFixed(2)} / unit
+                        ₹{getPrice(item.product.price).toFixed(2)} / unit (+{item.cgstRate + item.sgstRate}% GST)
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -251,12 +303,12 @@ export function POSInterface({ products }: { products: Product[] }) {
               <span className="font-medium">₹{subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">CGST (9%)</span>
-              <span className="font-medium">₹{cgst.toFixed(2)}</span>
+              <span className="text-muted-foreground">Total CGST</span>
+              <span className="font-medium">₹{cgstTotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">SGST (9%)</span>
-              <span className="font-medium">₹{sgst.toFixed(2)}</span>
+              <span className="text-muted-foreground">Total SGST</span>
+              <span className="font-medium">₹{sgstTotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between border-t pt-2 mt-2 text-lg font-bold">
               <span>Grand Total</span>

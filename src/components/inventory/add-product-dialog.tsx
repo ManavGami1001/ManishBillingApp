@@ -28,6 +28,8 @@ export function AddProductDialog() {
     sku: "",
     hsnCode: "",
     price: "",
+    costPrice: "",
+    gstRate: "18",
     stock: "",
   });
 
@@ -49,11 +51,13 @@ export function AddProductDialog() {
         sku: formData.sku,
         hsnCode: formData.hsnCode,
         price: parseFloat(formData.price),
+        costPrice: parseFloat(formData.costPrice || "0"),
+        gstRate: parseFloat(formData.gstRate || "18"),
         stock: parseInt(formData.stock, 10),
       });
 
       setOpen(false);
-      setFormData({ name: "", sku: "", hsnCode: "", price: "", stock: "" });
+      setFormData({ name: "", sku: "", hsnCode: "", price: "", costPrice: "", gstRate: "18", stock: "" });
       router.refresh(); // Refresh the current route to fetch new data
     } catch (err: any) {
       setError(err.message || "Failed to create product");
@@ -64,9 +68,8 @@ export function AddProductDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>
-          <PackagePlus className="mr-2 h-4 w-4" />
-          Add Product
+      <DialogTrigger className={buttonVariants({ variant: "default" })}>
+        Add Product
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
@@ -127,7 +130,7 @@ export function AddProductDialog() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label htmlFor="price" className="text-sm font-medium">
-                  Price (₹)
+                  Selling Price / MRP (₹)
                 </label>
                 <Input
                   id="price"
@@ -138,6 +141,40 @@ export function AddProductDialog() {
                   required
                   placeholder="0.00"
                   value={formData.price}
+                  onChange={handleChange}
+                  disabled={loading}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="costPrice" className="text-sm font-medium">
+                  Cost Price (₹)
+                </label>
+                <Input
+                  id="costPrice"
+                  name="costPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={formData.costPrice}
+                  onChange={handleChange}
+                  disabled={loading}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="space-y-2">
+                <label htmlFor="gstRate" className="text-sm font-medium">
+                  GST Rate (%)
+                </label>
+                <Input
+                  id="gstRate"
+                  name="gstRate"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  placeholder="18"
+                  value={formData.gstRate}
                   onChange={handleChange}
                   disabled={loading}
                 />

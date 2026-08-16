@@ -5,6 +5,10 @@ import bcrypt from "bcryptjs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not Found" }, { status: 404 });
+  }
+
   try {
     const existingAdmin = await prisma.user.findUnique({
       where: { email: "admin@example.com" }
@@ -19,7 +23,8 @@ export async function GET() {
     const tenant = await prisma.tenant.create({
       data: {
         name: "Cipher 0",
-        state: "active",
+        address: "123 Default St",
+        phone: "555-1234",
         users: {
           create: {
             email: "admin@example.com",

@@ -4,8 +4,16 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { Prisma } from "@prisma/client";
 
+export async function getGstRate(hsnCode: string | null | undefined) {
+  if (!hsnCode) return { cgst: 9, sgst: 9 };
+  if (hsnCode.startsWith("1")) return { cgst: 2.5, sgst: 2.5 };
+  if (hsnCode.startsWith("2")) return { cgst: 6, sgst: 6 };
+  if (hsnCode.startsWith("3")) return { cgst: 14, sgst: 14 };
+  return { cgst: 9, sgst: 9 };
+}
+
 export async function processCheckout(payload: {
-  cart: Array<{ productId: string; quantity: number; price: number; total: number }>;
+  cart: Array<{ productId: string; quantity: number; price: number; total: number; cgstRate: number; sgstRate: number }>;
   subtotal: number;
   cgst: number;
   sgst: number;
@@ -41,8 +49,8 @@ export async function processCheckout(payload: {
             productId: item.productId,
             quantity: new Prisma.Decimal(item.quantity),
             price: new Prisma.Decimal(item.price),
-            cgstRate: new Prisma.Decimal(9), // 9% fixed for this demo
-            sgstRate: new Prisma.Decimal(9),
+            cgstRate: new Prisma.Decimal(item.cgstRate),
+            sgstRate: new Prisma.Decimal(item.sgstRate),
             igstRate: new Prisma.Decimal(0),
           })),
         },
@@ -68,11 +76,12 @@ export async function processCheckout(payload: {
       }
 
       await tx.product.update({
-        where: { id: item.productId },
+        where: { 
+          id: item.productId,
+          stock: { gte: item.quantity }
+        },
         data: {
-          stock: {
-            decrement: new Prisma.Decimal(item.quantity),
-          },
+          stock: { decrement: new Prisma.Decimal(item.quantity) },
         },
       });
     }

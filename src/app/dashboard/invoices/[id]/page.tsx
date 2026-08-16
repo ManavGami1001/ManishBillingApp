@@ -2,7 +2,7 @@ import React from "react";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { PrintButton } from "@/components/billing/print-button";
+import { InvoiceActions } from "@/components/billing/print-button";
 import { 
   Table, 
   TableBody, 
@@ -13,14 +13,14 @@ import {
 } from "@/components/ui/table";
 
 // Next.js standard params for dynamic route
-export default async function InvoicePage({ params }: { params: { id: string } }) {
+export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
 
   if (!session?.user?.tenantId) {
     return notFound();
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   const invoice = await prisma.invoice.findUnique({
     where: {
@@ -46,7 +46,7 @@ export default async function InvoicePage({ params }: { params: { id: string } }
       {/* Action Bar - Hidden during print */}
       <div className="flex items-center justify-between mb-8 print:hidden">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">Invoice Details</h1>
-        <PrintButton />
+        <InvoiceActions />
       </div>
 
       {/* Invoice Printable Area */}
@@ -56,7 +56,8 @@ export default async function InvoicePage({ params }: { params: { id: string } }
         <div className="flex justify-between items-start border-b pb-6 mb-6">
           <div>
             <h2 className="text-3xl font-bold">{invoice.tenant.name}</h2>
-            <p className="text-slate-500">{invoice.tenant.state}</p>
+            {invoice.tenant.address && <p className="text-slate-500">{invoice.tenant.address}</p>}
+            {invoice.tenant.phone && <p className="text-slate-500">{invoice.tenant.phone}</p>}
             {invoice.tenant.gstin && (
               <p className="text-sm font-medium mt-1">GSTIN: {invoice.tenant.gstin}</p>
             )}

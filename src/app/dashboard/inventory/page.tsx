@@ -1,6 +1,7 @@
 import React from "react";
 import { getProducts } from "./actions";
 import { AddProductDialog } from "@/components/inventory/add-product-dialog";
+import { ProductTableRow } from "@/components/inventory/product-table-row";
 import {
   Table,
   TableBody,
@@ -13,6 +14,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export default async function InventoryPage() {
   const products = await getProducts();
+  
+  // Mapped over 'products' instead of 'rawProducts'
+  const serializedProducts = products.map((p) => ({
+    ...p,
+    price: p.price.toString(),
+    stock: Number(p.stock)
+  }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -30,7 +38,7 @@ export default async function InventoryPage() {
           <CardDescription>A list of all products in your tenant's inventory.</CardDescription>
         </CardHeader>
         <CardContent>
-          {products.length === 0 ? (
+          {serializedProducts.length === 0 ? (
             <div className="flex h-40 items-center justify-center rounded-md border border-dashed border-slate-200 dark:border-slate-800">
               <p className="text-sm text-slate-500">No products found. Add one to get started.</p>
             </div>
@@ -43,18 +51,13 @@ export default async function InventoryPage() {
                     <TableHead>SKU</TableHead>
                     <TableHead>HSN Code</TableHead>
                     <TableHead className="text-right">Price (₹)</TableHead>
-                    <TableHead className="text-right">Stock</TableHead>
+                    <TableHead className="text-right w-[150px]">Stock</TableHead>
+                    <TableHead className="text-right w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {products.map((product) => (
-                    <TableRow key={product.id}>
-                      <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell>{product.sku || "-"}</TableCell>
-                      <TableCell>{product.hsnCode || "-"}</TableCell>
-                      <TableCell className="text-right">{product.price.toString()}</TableCell>
-                      <TableCell className="text-right">{product.stock}</TableCell>
-                    </TableRow>
+                  {serializedProducts.map((product) => (
+                    <ProductTableRow key={product.id} product={product} />
                   ))}
                 </TableBody>
               </Table>
